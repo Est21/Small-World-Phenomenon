@@ -1,78 +1,90 @@
 package prj1;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
-import prj1.Movie;
+import java.io.*;
+import java.util.*;
 
 public class main {
-	static List<Actor> actors = new ArrayList();
-	
-	private static void parser() {
-		try {
-            File file = new File("C:\\Users\\LENOVO\\Desktop\\movies.txt");   // Dosya adını burda argüman olarak alll !!!!!!!!!!!!!!!!
+
+    static List<Actor> actors = new ArrayList<>();
+    static List<List<Integer>> graph = new ArrayList<>();
+    static Map<String, Integer> actorIndex = new HashMap<>();
+
+    private static void parser() {
+        try {
+            File file = new File("D:\\movies.txt");
             Scanner sc = new Scanner(file);
 
             while (sc.hasNextLine()) {
                 String line = sc.nextLine();
-                seperateElement(line);
+                seperateElementAndBuildGraph(line);  // <-- değişti
             }
-
             sc.close();
 
         } catch (FileNotFoundException e) {
             System.out.println("Dosya bulunamadı!");
         }
-		
-	}
-	private static void seperateElement(String line) {
-		
-		String currentMovie;
-		boolean isDuplicate = false;
-		String[] lines = line.split("/");
-		
-		currentMovie = line.split("/")[0];
-				
-		for(int i = 1; i < line.split("/").length;i++)
-		{
-			isDuplicate = false;
-			
-			for (int j = 0; j < actors.size(); j++) {
-				if (lines[i].equals(actors.get(j).getName())) {
-					isDuplicate = true;
-					actors.get(j).addMovie(currentMovie);
-
-				} 
-			}
-			if (!isDuplicate) {
-				actors.add(Actor.getActor(lines[i]));
-				actors.get(actors.size() - 1).addMovie(currentMovie);
-			}
-		}
-		
-	}
-	static void addEdge(List<List<Integer>> adj, int u, int v) {
-        adj.get(u).add(v);
     }
-	static void displayAdjList(List<List<Integer>> adj) {
-        for (int i = 0; i < adj.size(); i++) {
-            System.out.print(i + ": ");
-            for (int j : adj.get(i)) {
-                System.out.print(j + " ");
+
+    private static int getOrCreateActorId(String name, String currentMovie) {
+        Integer id = actorIndex.get(name);
+        if (id != null) {
+            actors.get(id).addMovie(currentMovie);
+            return id;
+        }
+
+        // yeni aktör
+        actors.add(Actor.getActor(name));
+        int newId = actors.size() - 1;
+        actorIndex.put(name, newId);
+
+        actors.get(newId).addMovie(currentMovie);
+
+        // graph node'u da ekle
+        graph.add(new ArrayList<>());
+        return newId;
+    }
+
+    private static void addUndirectedEdge(int u, int v) {
+        if (u == v) return;
+        graph.get(u).add(v);
+        graph.get(v).add(u);
+    }
+
+    private static void seperateElementAndBuildGraph(String line) {
+        String[] parts = line.split("/");
+        String currentMovie = parts[0];
+
+        List<Integer> ids = new ArrayList<>();
+
+        for (int i = 1; i < parts.length; i++) {
+            String actorName = parts[i].trim();
+            int id = getOrCreateActorId(actorName, currentMovie);
+            ids.add(id);
+        }
+
+        // aynı filmdeki herkes birbirine bağlı
+        for (int a = 0; a < ids.size(); a++) {
+            for (int b = a + 1; b < ids.size(); b++) {
+                addUndirectedEdge(ids.get(a), ids.get(b));
             }
+        }
+    }
+
+    static void displayAdjList() {
+        for (int i = 0; i < graph.size(); i++) {
+            System.out.print(i + " (" + actors.get(i).getName() + "): ");
+            for (int j : graph.get(i)) System.out.print(j + " ");
             System.out.println();
         }
     }
-	public static void main(String[] args) {
-		
-		List<List<Integer>> graph = new ArrayList<>();
-		parser();
-		
-		for (int i = 0; i < actors.size() ; i++) {
-			System.out.println(actors.get(i));
-		}
-	}
 
+    public static void main(String[] args) {
+        parser();
+
+        for (int i = 0; i < actors.size(); i++) {
+            System.out.println(i + " -> " + actors.get(i));
+        }
+
+        displayAdjList();
+    }
 }
